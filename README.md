@@ -11,6 +11,7 @@ Show some tiles and sprites graphics for the MSX computers.
 For MacOS use Homebrew to install :
 ```
 brew install wla-dx
+brew install openmsx
 ```
 
 ## Build
@@ -24,7 +25,7 @@ wlalink teedjay.link teedjay.rom
 ## Run using MSX emulator
 On MacOS you could open the ROM you just built manually from the menu of the emulator, or from command line.
 ```
-open teedjay.rom
+openmsx teedjay.rom
 ```
 
 ## What does it look like?

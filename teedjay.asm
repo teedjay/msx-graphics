@@ -48,7 +48,12 @@ MSX_ROM:
 
 START:
     di
+    call CLEAR_VDP
+    call SETUP_REGISTERS
     call WRITE_HELLO_WORLD
+    call WRITE_COLOR_ATTRIBUTES
+    call DEFINE_SPRITES
+    call PRINT_SPRITES
     ;call SETUP_HTIMI
     call SETUP_HKEYI
     im 1
@@ -57,6 +62,7 @@ START:
 
 ; update background and foreground colors from memory address
 LOOP:
+    jr LOOP
     ld a,($E000)
     rla
     rla
@@ -110,18 +116,17 @@ SETUP_HTIMI:
 ; This should work on SVI, MSX, Colecovision, Memotech and many 
 ; other Z80 based home computers or game consoles.
 ;============================================================== 
-WRITE_HELLO_WORLD:
+
+CLEAR_VDP:
     ; Let's set VDP write address to $0000 
     XOR A 
     OUT (CMDP),A 
     LD A,$40 
     OUT (CMDP),A 
-
     ; Now let's clear first 16Kb of VDP memory 
-    LD B,0 
+    LD B,$00 
     LD HL,$3FFF 
-    LD C,DATAP 
-
+    LD C,DATAP
 CLEAR: 
     OUT (C),B 
     DEC HL 
@@ -129,16 +134,17 @@ CLEAR:
     OR L 
     NOP ; Let's wait 8 clock cycles just in case VDP is not quick enough. 
     NOP 
-    JR NZ,CLEAR 
+    JR NZ,CLEAR
+    RET
 
-    ; Now it is time to set up VDP registers: 
+SETUP_REGISTERS:
     LD C,CMDP 
 
     ;---------------------------------------- 
     ; Register 0 to $0 
     ; 
-    ; Set mode selection bit M3 (maybe also M4 & M5) to zero and 
-    ; disable external video & horizontal interrupt 
+    ; Set mode selection bit M3-M5 to zero and 
+    ; disable external video & lightpen / horizontal interrupt 
     ;
     LD A,$00
     LD E,$80 
@@ -146,17 +152,19 @@ CLEAR:
     OUT (C),E 
 
     ;---------------------------------------- 
-    ; Register 1 to $70 
+    ; Register 1
     ; 
-    ; Select 40 column mode, enable screen and enable vertical interrupt 
+    ; Select 32 column mode, Graphic 1 M1-M2 = 0
+    ; enable screen and enable vertical interrupt 
+    ; 16x16 sprites and magnified 2x
     ;
-    LD A,$70 
+    LD A,$E3
     LD E,$81
     OUT (C),A 
     OUT (C),E 
 
     ;---------------------------------------- 
-    ; Register 2 to $0 
+    ; Register 2 to $0 (00BB BB00 0000 0000)
     ; 
     ; Set pattern name table to $0000 
     ;
@@ -166,53 +174,63 @@ CLEAR:
     OUT (C),E 
 
     ;---------------------------------------- 
-    ; Register 3 is ignored as 40 column mode does not need color table 
+    ; Register 3 set color table to $0400 (00BB BBBB BB00 0000 ))
     ; 
+    LD A,$10    ; $10 * $40 = $0400
+    LD E,$83
+    OUT (C),A 
+    OUT (C),E 
     
     ;---------------------------------------- 
-    ; Register 4 to $1 
-    ; Set pattern generator table to $800 
+    ; Register 4 to $1 (00BB B000 0000 0000 )
+    ; Set pattern generator table to $0800 
     ;
-    LD A,$01 
+    LD A,$01    ; $01 * $800 = $0800
     LD E,$84
     OUT (C),A 
     OUT (C),E
 
     ;---------------------------------------- 
-    ; Registers 5 (Sprite attribute) is ignored as 40 column mode does not have sprites 
+    ; Registers 5 (Sprite attribute) to $1000 (00BB BBBB B000 0000)
     ;
+    LD A,$02    ; $20 * $80 = $1000 base address for sprite attributes
+    LD E,$85
+    OUT (C),A 
+    OUT (C),E
 
     ;---------------------------------------- 
-    ; Registers 6 (Sprite pattern) is ignored as 40 column mode does not have sprites 
+    ; Registers 6 (Sprite pattern) to $2000 (00BB B000 0000 0000)
     ;
+    LD A,$04    ; $04 * $800 = $2000 base address for sprite patterns
+    LD E,$86
+    OUT (C),A 
+    OUT (C),E
 
     ;---------------------------------------- 
     ; Register 7 to $F0 
-    ; Set colors to white on black 
+    ; Set colors to black 
     ;
-    LD A,$F0 
+    LD A,$F4
     LD E,$87
     OUT (C),A 
     OUT (C),E 
 
-    ; allow VDP registers to settle (probably not needed)
-    NOP
-    NOP
+    RET
 
+WRITE_HELLO_WORLD:
+    LD C,CMDP 
     ;---------------------------------------- 
     ; Let's set VDP write address to $808 so, that we can write 
-    ; character set to memory 
+    ; character patterns to memory 
     ; (No need to write SPACE it is clear char already) 
     ;
-    LD A,8 
+    LD A,$08 
     OUT (C),A 
     LD A,$48 
     OUT (C),A 
-
     ; Let's copy character set 
     LD HL, CHARS 
     LD B, CHARS_END-CHARS 
-
 COPYCHARS: 
     LD A,(HL) 
     OUT (DATAP),A 
@@ -221,23 +239,73 @@ COPYCHARS:
     NOP 
     DJNZ COPYCHARS 
 
-    ; Let's set write address to start of name table 
+    ; Let's set write address to start of tiles table $0000
     XOR A 
     OUT (C),A 
     LD A,$40 
     OUT (C),A 
-
     ; Let's put characters to screen 
     LD HL,ORDER 
     LD B,ORDER_END-ORDER 
-
 COPYORDER: 
     LD A,(HL) 
     OUT (DATAP),A 
     INC HL 
-    DJNZ COPYORDER 
+    NOP ; Let's wait 8 clock cycles just in case VDP is not quick enough. 
+    NOP 
+    DJNZ COPYORDER
+    RET
 
-    ; The end 
+WRITE_COLOR_ATTRIBUTES:
+    LD C,CMDP 
+    ; Let's set write address to color attribute to $0400
+    LD A,$00
+    OUT (C),A 
+    LD A,$44
+    OUT (C),A 
+    LD HL,SPRITES
+    LD B,SPRITES_END-SPRITES
+COPYCOLORS: 
+    LD A,(HL)
+    OUT (DATAP),A
+    INC HL
+    NOP ; Let's wait 8 clock cycles just in case VDP is not quick enough. 
+    NOP 
+    DJNZ COPYCOLORS 
+    RET
+
+DEFINE_SPRITES:
+    LD C,CMDP 
+    LD A,$00
+    OUT (C),A 
+    LD A,$60         ; bit 14 + $2000
+    OUT (C),A 
+    LD HL,SPRITES 
+    LD B,SPRITES_END-SPRITES
+COPY_SPRITE_PATTERNS: 
+    LD A,(HL) 
+    OUT (DATAP),A 
+    INC HL 
+    NOP ; Let's wait 8 clock cycles just in case VDP is not quick enough. 
+    NOP 
+    DJNZ COPY_SPRITE_PATTERNS 
+    RET
+
+PRINT_SPRITES:
+    LD C,CMDP 
+    LD A,$00
+    OUT (C),A 
+    LD A,$50         ; bit 14 + $1000
+    OUT (C),A 
+    LD HL, SPRITE_ATTRIBUTES 
+    LD B, SPRITE_ATTRIBUTES_END-SPRITE_ATTRIBUTES
+COPY_SPRITE_ATTRIBUTES: 
+    LD A,(HL) 
+    OUT (DATAP),A 
+    INC HL 
+    NOP ; Let's wait 8 clock cycles just in case VDP is not quick enough. 
+    NOP 
+    DJNZ COPY_SPRITE_ATTRIBUTES
     RET
 
     ; Character set: 
@@ -247,10 +315,9 @@ ORDER:
 ORDER_END: 
 
 CHARS: 
-
     ; H 
     .db %10001000 
-    .db %10001000 
+    .db %10001000
     .db %10001000 
     .db %11111000 
     .db %10001000 
@@ -293,7 +360,6 @@ CHARS:
     .db %11011000 
     .db %10001000 
     .db %00000000 
-
     ; r 
     .db %00000000 
     .db %00000000 
@@ -313,3 +379,36 @@ CHARS:
     .db %01101000 
     .db %00000000 
 CHARS_END:
+
+SPRITE_ATTRIBUTES:
+    .DB $10,$10,$00,$07     ; x,y,pattern,color
+    .DB $20,$20,$01,$03     ; x,y,pattern,color
+    .DB $30,$30,$02,$01     ; x,y,pattern,color
+    .DB $40,$40,$03,$09     ; x,y,pattern,color
+SPRITE_ATTRIBUTES_END:
+
+SPRITES:
+; --- Slot 0 - GHOST V0
+    .DB $01,$07,$1C,$38,$70,$60,$E0,$C6
+    .DB $CE,$C4,$C0,$CF,$D8,$C0,$DF,$F3
+    .DB $E0,$E0,$70,$18,$1C,$1C,$0E,$66
+    .DB $76,$26,$07,$E7,$33,$03,$FF,$33
+; 
+; --- Slot 1 - GHOST H0
+    .DB $07,$07,$0E,$18,$38,$38,$70,$66
+    .DB $6E,$64,$E0,$E7,$CC,$C0,$FF,$CC
+    .DB $80,$E0,$38,$1C,$0E,$06,$07,$63
+    .DB $73,$23,$03,$F3,$1B,$03,$FB,$CF
+; 
+; --- Slot 2 - GHOST V1
+    .DB $01,$07,$1C,$38,$70,$60,$E4,$CE
+    .DB $C4,$C0,$C0,$CF,$C0,$C0,$DF,$F3
+    .DB $E0,$E0,$70,$18,$1C,$1C,$4E,$E6
+    .DB $46,$06,$07,$F7,$03,$03,$FF,$33
+; 
+; --- Slot 3 - GHOST H1
+    .DB $07,$07,$0E,$18,$38,$38,$72,$67
+    .DB $62,$60,$E0,$EF,$C0,$C0,$FF,$CC
+    .DB $80,$E0,$38,$1C,$0E,$06,$27,$73
+    .DB $23,$03,$03,$F3,$03,$03,$FB,$CF
+SPRITES_END:
