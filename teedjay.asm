@@ -62,7 +62,6 @@ START:
 
 ; update background and foreground colors from memory address
 LOOP:
-    jr LOOP
     ld a,($E000)
     rla
     rla
@@ -193,7 +192,7 @@ SETUP_REGISTERS:
     ;---------------------------------------- 
     ; Registers 5 (Sprite attribute) to $1000 (00BB BBBB B000 0000)
     ;
-    LD A,$02    ; $20 * $80 = $1000 base address for sprite attributes
+    LD A,$20    ; $20 * $80 = $1000 base address for sprite attributes
     LD E,$85
     OUT (C),A 
     OUT (C),E
@@ -381,11 +380,43 @@ CHARS:
 CHARS_END:
 
 SPRITE_ATTRIBUTES:
-    .DB $10,$10,$00,$07     ; x,y,pattern,color
-    .DB $20,$20,$01,$03     ; x,y,pattern,color
-    .DB $30,$30,$02,$01     ; x,y,pattern,color
-    .DB $40,$40,$03,$09     ; x,y,pattern,color
+
+    // 4 first sprite patterns are same 32x32
+    .DB $10,$10,$00,$02     ; y,x,pattern,color
+    .DB $32,$10,$01,$03     ; y,x,pattern,color
+    .DB $10,$32,$02,$04     ; y,x,pattern,color
+    .DB $32,$32,$03,$05     ; y,x,pattern,color
+
+    // 4 next sprite patterns are same 32x32
+    .DB $70,$10,$04,$06     ; y,x,pattern,color
+    .DB $92,$10,$05,$07     ; y,x,pattern,color
+    .DB $70,$32,$06,$08     ; y,x,pattern,color
+    .DB $92,$32,$07,$09     ; y,x,pattern,color
+
+    // 4 next sprite patterns are same 32x32
+    .DB $10,$80,$08,$0a     ; y,x,pattern,color
+    .DB $32,$80,$09,$0b     ; y,x,pattern,color
+    .DB $10,$a2,$0a,$0c     ; y,x,pattern,color
+    .DB $32,$a2,$0b,$0d     ; y,x,pattern,color
+
+    // 4 next sprite patterns are same 32x32
+    .DB $70,$80,$0c,$0e     ; y,x,pattern,color
+    .DB $92,$80,$0d,$0f     ; y,x,pattern,color
+    .DB $70,$a2,$0e,$02     ; y,x,pattern,color
+    .DB $92,$a2,$0f,$03     ; y,x,pattern,color
+
 SPRITE_ATTRIBUTES_END:
+
+
+    .DB $10,$40,$00,$07     ; x,y,pattern,color
+    .DB $32,$40,$01,$03     ; x,y,pattern,color
+    .DB $10,$62,$02,$02     ; x,y,pattern,color
+    .DB $32,$62,$03,$09     ; x,y,pattern,color
+
+    .DB $70,$40,$00,$07     ; x,y,pattern,color
+    .DB $92,$40,$01,$03     ; x,y,pattern,color
+    .DB $70,$62,$02,$02     ; x,y,pattern,color
+    .DB $92,$62,$03,$09     ; x,y,pattern,color
 
 SPRITES:
 ; --- Slot 0 - GHOST V0
