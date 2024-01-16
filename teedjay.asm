@@ -407,17 +407,6 @@ SPRITE_ATTRIBUTES:
 
 SPRITE_ATTRIBUTES_END:
 
-
-    .DB $10,$40,$00,$07     ; x,y,pattern,color
-    .DB $32,$40,$01,$03     ; x,y,pattern,color
-    .DB $10,$62,$02,$02     ; x,y,pattern,color
-    .DB $32,$62,$03,$09     ; x,y,pattern,color
-
-    .DB $70,$40,$00,$07     ; x,y,pattern,color
-    .DB $92,$40,$01,$03     ; x,y,pattern,color
-    .DB $70,$62,$02,$02     ; x,y,pattern,color
-    .DB $92,$62,$03,$09     ; x,y,pattern,color
-
 SPRITES:
 ; --- Slot 0 - GHOST V0
     .DB $01,$07,$1C,$38,$70,$60,$E0,$C6
